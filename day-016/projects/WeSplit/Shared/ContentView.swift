@@ -15,11 +15,19 @@ struct ContentView: View {
     
     private let tipPercentages = [10, 15, 20, 25, 0]
     
-    private var currencyFormatter: NumberFormatter  {
+    private var currencyFormatter: FloatingPointFormatStyle<Double>.Currency  {
+        get {
+            let code = Locale.current.currencyCode ?? "USD"
+            
+            return FloatingPointFormatStyle<Double>.Currency(code: code)
+        }
+    }
+    
+    private var decimalFormatter: NumberFormatter {
         get {
             let formatter = NumberFormatter()
             formatter.numberStyle = .currency
-            formatter.locale = Locale.current
+            formatter.currencyCode = Locale.current.currencyCode ?? "USD"
             return formatter
         }
     }
@@ -27,7 +35,7 @@ struct ContentView: View {
     //Since all the properties used inside this computed property are marked as @State
     //any changes to one of them makes this property to be recalculated
     //and also the entire view will be reevaluated
-    var totalPerPerson: Double {
+    private var totalPerPerson: Double {
         let peopleCount = Double(numberOfPeople + 2)
         let tipSelection = Double(tipPercentage)
 
@@ -38,11 +46,19 @@ struct ContentView: View {
         return amountPerPerson
     }
     
+    private var totalAmount : Double {
+        let tipSelection = Double(tipPercentage)
+        let tipValue = checkAmount / 100 * tipSelection
+        let grandTotal = checkAmount + tipValue
+        
+        return grandTotal
+    }
+    
     var body: some View {
         NavigationView {
             Form {
                 Section {
-                    TextField("Amount", value: $checkAmount, formatter: currencyFormatter)
+                    TextField("Amount", value: $checkAmount, formatter: decimalFormatter)
                         .keyboardType(.decimalPad)
                         .focused($amountIsFocused)
                     Picker("Number of People", selection: $numberOfPeople) {
@@ -52,25 +68,41 @@ struct ContentView: View {
                     }
                 }
                 Section {
+                    /*
                     Picker("Tip percentage", selection: $tipPercentage) {
                         ForEach(tipPercentages, id: \.self) {
                             Text($0, format: .percent)
                         }
                     }
                     .pickerStyle(.segmented)
+                     */
+                    Picker("Tip percentage", selection: $tipPercentage) {
+                        ForEach(0..<101) {
+                            Text($0, format: .percent)
+                        }
+                    }
                 } header: {
                     Text("How much tip do you want to leave?")
                 }
                 
                 Section {
-                        Text(totalPerPerson, format: .currency(code: Locale.current.currencyCode ?? "USD"))
+                    Text(totalAmount, format: .currency(code: "USD"))
+                    Text(totalAmount, format: currencyFormatter)
+                } header: {
+                    Text("Total Amout")
+                }
+                
+                Section {
+                        Text(totalPerPerson, format: currencyFormatter)
+                } header: {
+                    Text("Amount per person")
                 }
             }
             .navigationTitle("WeSplit")
             
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
-                    //using a spacer to attach the button to the trailing 
+                    //using a spacer to attach the button to the trailing
                     Spacer()
                     Button("Done") {
                         amountIsFocused = false
